@@ -7,7 +7,7 @@ on:
 
 jobs:
   build:
-    runs-on: macos-14
+    runs-on: macos-15
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -16,8 +16,10 @@ jobs:
         run: |
           brew install xcodegen
           xcodegen generate
+          # تحويل صيغة المشروع من 77 إلى 56 لضمان التوافق التام مع جميع إصدارات Xcode
+          sed -i '' 's/objectVersion = 77;/objectVersion = 56;/g' SmartPOS.xcodeproj/project.pbxproj
 
-      # بناء نسخة المحاكي للمتصفح (Appetize.io)
+      # 1. بناء نسخة المحاكي للمتصفح (Appetize.io)
       - name: Build for iOS Simulator
         run: |
           xcodebuild clean build \
@@ -41,7 +43,7 @@ jobs:
           name: SmartPOS-Browser-Simulator
           path: SmartPOS-Simulator.zip
 
-      # بناء نسخة الآيفون الحقيقي (.ipa)
+      # 2. بناء نسخة الآيفون الحقيقي (.ipa)
       - name: Build for Physical iPhone (.ipa)
         run: |
           xcodebuild clean build \
