@@ -1,0 +1,64 @@
+name: Build iOS App
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-14
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Generate Xcode Project via XcodeGen
+        run: |
+          brew install xcodegen
+          xcodegen generate
+
+      # بناء نسخة المحاكي للمتصفح (Appetize.io)
+      - name: Build for iOS Simulator
+        run: |
+          xcodebuild clean build \
+            -project SmartPOS.xcodeproj \
+            -scheme SmartPOS \
+            -configuration Debug \
+            -sdk iphonesimulator \
+            -derivedDataPath build-sim \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO
+
+      - name: Zip Simulator Bundle
+        run: |
+          cd build-sim/Build/Products/Debug-iphonesimulator
+          zip -r $GITHUB_WORKSPACE/SmartPOS-Simulator.zip SmartPOS.app
+
+      - name: Upload Simulator Build
+        uses: actions/upload-artifact@v4
+        with:
+          name: SmartPOS-Browser-Simulator
+          path: SmartPOS-Simulator.zip
+
+      # بناء نسخة الآيفون الحقيقي (.ipa)
+      - name: Build for Physical iPhone (.ipa)
+        run: |
+          xcodebuild clean build \
+            -project SmartPOS.xcodeproj \
+            -scheme SmartPOS \
+            -configuration Release \
+            -sdk iphoneos \
+            -derivedDataPath build-device \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO
+          mkdir -p Payload
+          cp -r build-device/Build/Products/Release-iphoneos/SmartPOS.app Payload/
+          zip -r SmartPOS.ipa Payload
+
+      - name: Upload Device IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: SmartPOS-iOS-App
+          path: SmartPOS.ipa
